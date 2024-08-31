@@ -75,7 +75,12 @@ def from_subj_decode(msg_from_subj):
         encoding = decode_header(msg_from_subj)[0][1]
         msg_from_subj = decode_header(msg_from_subj)[0][0]
         if isinstance(msg_from_subj, bytes):
-            msg_from_subj = msg_from_subj.decode(encoding)
+            msg_from_subj_str = msg_from_subj.decode("utf-8")
+            index = msg_from_subj_str.find('=?UTF-8?')
+            if '=?UTF-8?' in msg_from_subj.decode('utf-8'):
+                msg_from_subj = msg_from_subj.decode(encoding)
+            else:
+                msg_from_subj = msg_from_subj_str
         if isinstance(msg_from_subj, str):
             pass
         msg_from_subj = str(msg_from_subj).strip("<>").replace("<", "")
@@ -148,9 +153,10 @@ def get_letter_text(msg):
                 else:
                     letter_text = extract_part.rstrip().lstrip()
                 count += 1
-                return (
-                    letter_text.replace("<", "").replace(">", "").replace("\xa0", " ")
-                )
+                letter_text = letter_text.replace("<", "").replace(">", "").replace("\xa0", " ")
+                lines = [line for line in letter_text.split('\n') if line.strip() != '']
+                letter_text = '\n'.join(lines)
+                return letter_text
     else:
         count = 0
         if msg.get_content_maintype() == "text" and count == 0:
@@ -160,7 +166,10 @@ def get_letter_text(msg):
             else:
                 letter_text = extract_part
             count += 1
-            return letter_text.replace("<", "").replace(">", "").replace("\xa0", " ")
+            letter_text = letter_text.replace("<", "").replace(">", "").replace("\xa0", " ")
+            lines = [line for line in letter_text.split('\n') if line.strip() != '']
+            letter_text = '\n'.join(lines)
+            return letter_text
 
 
 def send_attach(msg, msg_subj, repl):
@@ -182,14 +191,13 @@ def post_construct(msg_subj, msg_from, msg_email, letter_text, attachments):
         "\U0001F4E8 <b>",
         str(msg_subj),
         "</b>\n\n",
-        "<pre>",
         str(msg_from),
         "\n",
         msg_email,
-        "</pre>\n\n",
+        "\n\n",
         letter_text,
         "\n\n",
-        "\U0001F4CE<i> вложения: </i>",
+        "\U0001F4CE<i> вложения: </i> ",
         str(len(attachments)),
         "\n\n",
         att_txt,
